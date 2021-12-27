@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ecbpenguin.saml.client.utils.AuthnRequestUtils;
+import com.ecbpenguin.saml.client.utils.IdpMetadataUtils;
 import com.ecbpenguin.saml.client.utils.SAMLResponseUtils;
 import com.ecbpenguin.saml.client.utils.ServiceProviderMetadataUtils;
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
@@ -25,6 +26,8 @@ public class TinySamlClient {
 	private final AuthnRequestUtils authnRequestUtils;
 
 	private final SAMLResponseUtils samlResponseUtils;
+
+	private final IdpMetadataUtils idpMetadataUtils; 
 
 	private final ServiceProviderMetadataUtils serviceProviderMetadataUtils;
 
@@ -43,16 +46,30 @@ public class TinySamlClient {
 
 		final String spMetadataFile = config.getServiceProviderMetadataFile();
 		serviceProviderMetadataUtils = new ServiceProviderMetadataUtils(spMetadataFile);
+		idpMetadataUtils = new IdpMetadataUtils(config);
 		authnRequestUtils = new AuthnRequestUtils(serviceProviderMetadataUtils);
-		samlResponseUtils = new SAMLResponseUtils(config, serviceProviderMetadataUtils);
+		samlResponseUtils = new SAMLResponseUtils(idpMetadataUtils, serviceProviderMetadataUtils);
 
 	}
 
+	/**
+	 * Builds a SAML2 AuthnRequest and encodes it for the appropriate binding, ready to put into a HTML response.
+	 * 
+	 * @param sign whether or not to sign the request
+	 * @return
+	 */
 	public final String buildSAMLRequest(final boolean sign) {
 		AuthnRequest request = authnRequestUtils.buildAuthnRequest(sign);
 		return AuthnRequestUtils.wireEncodeAuthRequest(request);
 	}
 
+	/**
+	 * Returns the endpoint URL for the IDP that matches the Service Provider's preferred binding
+	 * @return a URL for either the POST or Redirect bindings, per service provider metadata preference
+	 */
+	public final String getIdpSSOUrl() {
+		return idpMetadataUtils.getIdpSsoUrl();
+	}
 
 	/**
 	 * Returns the name ID associated with the SAML response, or null if the name ID can
@@ -64,9 +81,9 @@ public class TinySamlClient {
 		try {
 			return samlResponseUtils.validateSAMLResponsePostBinding(encodedSamlResponse);
 		} catch (final IOException e) {
-			System.out.println("Could not validate SAML response " + e.getMessage());
 			LOGGER.error("Could not process SAML Response: ", e);
 			return null;
 		}
 	}
 }
+ 

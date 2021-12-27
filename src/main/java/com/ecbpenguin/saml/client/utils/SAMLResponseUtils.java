@@ -34,8 +34,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-import com.ecbpenguin.saml.config.TinySamlClientConfig;
-
 /**
  * This class employs OpenSAML classes to validate a SAML Response. It needs augmentation for
  * 1. In Response To metrics = the caller would need to retain the original SAML request to perform this validation
@@ -53,16 +51,16 @@ public class SAMLResponseUtils {
 
 	private final UnmarshallerFactory unmarshallerFactory;
 
-	private final SignatureUtils signatureUtils;
+	private final IdpMetadataUtils idpMetadataUtils;
 
 	private final ServiceProviderMetadataUtils serviceProviderMetadataUtils;
 	
-	public SAMLResponseUtils(final TinySamlClientConfig config, final ServiceProviderMetadataUtils serviceProviderMetadataUtils) {
+	public SAMLResponseUtils(final IdpMetadataUtils idpMetadataUtils, final ServiceProviderMetadataUtils serviceProviderMetadataUtils) {
 		if (serviceProviderMetadataUtils == null) {
 			throw new IllegalArgumentException("serviceProviderMetadataUtils must not be null!");
 		}
-		if (config == null) {
-			throw new IllegalArgumentException("tinySamlClientConfig must not be null!");
+		if (idpMetadataUtils == null) {
+			throw new IllegalArgumentException("idpMetadataUtils must not be null!");
 		}
 		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		documentBuilderFactory.setNamespaceAware(true);
@@ -74,9 +72,8 @@ public class SAMLResponseUtils {
 			throw new RuntimeException(e);
 		}
 
-		unmarshallerFactory = XMLObjectProviderRegistrySupport.getUnmarshallerFactory();
-
-		this.signatureUtils = new SignatureUtils(config);
+		this.unmarshallerFactory = XMLObjectProviderRegistrySupport.getUnmarshallerFactory();
+		this.idpMetadataUtils = idpMetadataUtils;
 		this.serviceProviderMetadataUtils = serviceProviderMetadataUtils;
 	}
 
@@ -143,7 +140,7 @@ public class SAMLResponseUtils {
 		if (responseSignature != null ) {
 			boolean valid = false;
 			try {
-				valid = signatureUtils.validateSignature(responseSignature);
+				valid = idpMetadataUtils.validateIdpSignature(responseSignature);
 			} catch (final SignatureException e) {
 				throw new IOException(e);
 			}
@@ -158,7 +155,7 @@ public class SAMLResponseUtils {
 		if (assertionSignature != null ) {
 			boolean valid = false;
 			try {
-				valid = signatureUtils.validateSignature(assertionSignature);
+				valid = idpMetadataUtils.validateIdpSignature(assertionSignature);
 			} catch (final SignatureException e) {
 				throw new IOException(e);
 			}
