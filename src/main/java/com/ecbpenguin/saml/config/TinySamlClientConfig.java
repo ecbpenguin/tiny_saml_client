@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Configuration holder
  * 
@@ -17,13 +14,9 @@ import org.slf4j.LoggerFactory;
  */
 public class TinySamlClientConfig {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(TinySamlClientConfig.class);
-
 	private static final String SP_METADATA_FILE_KEY = "tinySamlClient.serviceProviderMetadataFileLocation";
 
-	private static final String SP_SIGNING_KEY_LOCATION = "tinySamlClient.serviceProviderSigningKeyLocation";
-
-	private static final String SP_SIGNING_KEY_ALIAS = "tinySamlClient.serviceProviderKeyAlias";
+	private static final String SP_SIGNING_KEY_LOCATION_KEY = "tinySamlClient.serviceProviderSigningKeyLocation";
 
 	private static final String IDP_METADATA_URL_KEY = "tinySamlClient.idpMetadataUrl";
 
@@ -34,6 +27,8 @@ public class TinySamlClientConfig {
 	private final String idpMetadataCacheLocation;
 
 	private final String idpMetadataUrl;
+
+	private final String serviceProviderSigningKeyLocation;
 
 	public TinySamlClientConfig(final String tinySamlClientConfigFile) {
 
@@ -50,13 +45,13 @@ public class TinySamlClientConfig {
 				try {
 					is.close();
 				} catch (final IOException e) {
-					LOGGER.warn("Unable to close config file handle.  Probably memory leak.",  e);
+					// TODO log this somehow
 				}
 			}
 		}
 
 		// validate that you have all the properties you need 
-		Object serviceProviderMetadataFileObj =  tinySamlClientProps.get(SP_METADATA_FILE_KEY);
+		final Object serviceProviderMetadataFileObj =  tinySamlClientProps.getOrDefault(SP_METADATA_FILE_KEY, null);
 		if (serviceProviderMetadataFileObj == null ||
 				serviceProviderMetadataFileObj instanceof String) {
 			serviceProviderMetadataFile = (String)serviceProviderMetadataFileObj;
@@ -64,18 +59,25 @@ public class TinySamlClientConfig {
 			throw new IllegalArgumentException("Property " + SP_METADATA_FILE_KEY + " not found or not castable to a String in " + tinySamlClientConfigFile);
 		}
 	
-		Object idpMetadataUrlObj = tinySamlClientProps.get(IDP_METADATA_URL_KEY);
+		final Object idpMetadataUrlObj = tinySamlClientProps.getOrDefault(IDP_METADATA_URL_KEY, null);
 		if (idpMetadataUrlObj != null && idpMetadataUrlObj instanceof String) {
 			idpMetadataUrl = (String)idpMetadataUrlObj;
 		} else {
 			throw new IllegalArgumentException("Property " + IDP_METADATA_URL_KEY + " not found or not castable to a String in " + tinySamlClientConfigFile);
 		}
 
-		Object idpMetadataCacheLocationObj = tinySamlClientProps.get(IDP_METADATA_CACHE_LOCATION);
+		final Object idpMetadataCacheLocationObj = tinySamlClientProps.getOrDefault(IDP_METADATA_CACHE_LOCATION, null);
 		if (idpMetadataCacheLocationObj != null && idpMetadataCacheLocationObj instanceof String) {
 			idpMetadataCacheLocation = (String)idpMetadataCacheLocationObj;
 		} else {
 			throw new IllegalArgumentException("Property " + IDP_METADATA_CACHE_LOCATION + " not found or not castable to a String in " + tinySamlClientConfigFile);
+		}
+
+		Object signingKeyLocation = tinySamlClientProps.getOrDefault(SP_SIGNING_KEY_LOCATION_KEY, null);
+		if (signingKeyLocation != null && signingKeyLocation instanceof String) {
+			serviceProviderSigningKeyLocation = (String)signingKeyLocation;
+		} else {
+			serviceProviderSigningKeyLocation = null;
 		}
 	}
 
@@ -89,5 +91,9 @@ public class TinySamlClientConfig {
 
 	public String getIdpMetadataUrl() {
 		return idpMetadataUrl;
+	}
+
+	public String getServiceProviderSigningKeyLocation() {
+		return serviceProviderSigningKeyLocation;
 	}
 }

@@ -1,6 +1,14 @@
 package com.ecbpenguin.saml.client.utils;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.StringWriter;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -14,24 +22,65 @@ import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
 import org.opensaml.core.xml.io.Marshaller;
 import org.opensaml.core.xml.io.MarshallingException;
 import org.opensaml.saml.common.SAMLVersion;
+import org.opensaml.saml.common.SignableSAMLObject;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.Issuer;
 import org.opensaml.saml.saml2.core.NameIDPolicy;
 import org.opensaml.saml.saml2.core.impl.AuthnRequestBuilder;
 import org.opensaml.saml.saml2.core.impl.IssuerBuilder;
 import org.opensaml.saml.saml2.core.impl.NameIDPolicyBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.opensaml.security.x509.BasicX509Credential;
+import org.opensaml.xmlsec.SignatureSigningParameters;
+import org.opensaml.xmlsec.keyinfo.impl.X509KeyInfoGeneratorFactory;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.impl.SignatureBuilder;
+import org.opensaml.xmlsec.signature.support.SignatureConstants;
+import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.opensaml.xmlsec.signature.support.SignatureSupport;
 import org.w3c.dom.Element;
 
+/**
+ * Encapsulates anything necessary to generate a SAML v2 AuthnRequest
+ * @author ecb_penguin
+ *
+ */
 public class AuthnRequestUtils {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(AuthnRequestUtils.class);
-
 	private final ServiceProviderMetadataUtils serviceProviderMetadataUtils;
-	
-	public AuthnRequestUtils(final ServiceProviderMetadataUtils spMetadataUtils) {
+
+	private final BasicX509Credential signingCredential;
+
+	public AuthnRequestUtils(final ServiceProviderMetadataUtils spMetadataUtils, final String privateKeyLocation) throws IOException {
 		this.serviceProviderMetadataUtils = spMetadataUtils;
+		if (privateKeyLocation != null && privateKeyLocation.length() > 0) {
+			final PrivateKey privateKey = loadPrivateKey(privateKeyLocation);
+			final X509Certificate signingCertificate = spMetadataUtils.getSigningCertificate();
+			this.signingCredential = new BasicX509Credential(signingCertificate, privateKey);
+		} else {
+			this.signingCredential = null;
+		}
+	}
+
+	private final PrivateKey loadPrivateKey(final String privateKeyLocation) throws IOException {
+		RandomAccessFile raf = null;
+		try {
+			raf  = new RandomAccessFile(privateKeyLocation, "r");
+			final byte[] buf = new byte[(int) raf.length()];
+			raf.readFully(buf);
+			PKCS8EncodedKeySpec kspec = new PKCS8EncodedKeySpec(buf);
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			return kf.generatePrivate(kspec);
+		} catch (final IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+			throw new IOException("Private key file doesn't exist", e);
+		} finally {
+			if (raf!= null) {
+				try {
+					raf.close();
+				} catch (final IOException e2) {
+					// TODO log this once we clean up logging
+				}
+			}
+		}
 	}
 
 	public final AuthnRequest buildAuthnRequest(final boolean sign) {
@@ -58,13 +107,45 @@ public class AuthnRequestUtils {
 		final String id = "_" + UUID.randomUUID().toString();
 		authnRequest.setID(id);
 		authnRequest.setVersion(SAMLVersion.VERSION_20); // safe to hard code this, everything is SAML2
-		LOGGER.info("Creating SAML AuthnRequest: {}", authnRequest);
-		
-		if (sign) {
-			// TODO
-			LOGGER.error("TODO implement request signing");
+
+		if (sign && signingCredential != null) {
+			try {
+				signRequest(authnRequest);
+			} catch (final IOException e) {
+				// TODO log this
+				// letting an unsigned request flow through
+			}
 		}
 		return authnRequest;
+	}
+
+	private void signRequest(final SignableSAMLObject samlObject) throws IOException {
+
+		// Describe how we're going to sign the request
+		SignatureBuilder signer = new SignatureBuilder();
+		Signature signature = signer.buildObject(Signature.DEFAULT_ELEMENT_NAME);
+		signature.setCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+		signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
+
+		try {
+			signature.setKeyInfo(new X509KeyInfoGeneratorFactory().newInstance().generate(signingCredential));
+		} catch (final org.opensaml.security.SecurityException e) {
+			throw new IOException("Failed to sign request", e);
+		}
+		signature.setSigningCredential(signingCredential);
+		samlObject.setSignature(signature);
+
+		// Actually sign the request
+		SignatureSigningParameters signingParameters = new SignatureSigningParameters();
+		signingParameters.setSigningCredential(signingCredential);
+		signingParameters.setSignatureCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+		signingParameters.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
+		signingParameters.setKeyInfoGenerator(new X509KeyInfoGeneratorFactory().newInstance());
+		try {
+			SignatureSupport.signObject(samlObject, signingParameters);
+		} catch (final org.opensaml.security.SecurityException | MarshallingException | SignatureException e) {
+			throw new IOException("Failed to sign request", e);
+		}
 	}
 
 	public static final String wireEncodeAuthRequest(final AuthnRequest authnRequest) {
