@@ -28,8 +28,6 @@ import org.opensaml.saml.saml2.core.SubjectConfirmation;
 import org.opensaml.saml.saml2.core.SubjectConfirmationData;
 import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.support.SignatureException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -45,7 +43,7 @@ import org.xml.sax.SAXException;
  */
 public class SAMLResponseUtils {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(SAMLResponseUtils.class);
+	private static final int CLOCK_SKEW_SECONDS = 30;
 
 	private final DocumentBuilder documentBuilder; 
 
@@ -68,7 +66,6 @@ public class SAMLResponseUtils {
 		try {
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		} catch (final ParserConfigurationException e) {
-			LOGGER.error("Failed to initialize Document Builder Factory", e);
 			throw new RuntimeException(e);
 		}
 
@@ -120,17 +117,15 @@ public class SAMLResponseUtils {
 	}
 
 	private void checkNotOnOrAfter(final DateTime notOnOrAfter) throws IOException {
-		final DateTime now = DateTime.now();
-		if (notOnOrAfter != null && now.isAfter(notOnOrAfter)) {
-			LOGGER.error("Failed condition.  Now = {}, Not on or after = {}", now, notOnOrAfter);
+		final DateTime skewedTime = getSkewedTime();
+		if (notOnOrAfter != null && skewedTime.isAfter(notOnOrAfter)) {
 			throw new IOException("Not on or after condition violated for time = " + notOnOrAfter);
 		}
 	}
 
 	private void checkNotBefore(final DateTime notBefore) throws IOException {
-		final DateTime now = DateTime.now();
-		if (notBefore != null && now.isBefore(notBefore)) {
-			LOGGER.error("Failed condition.  Now = {}, Not before= {}", now, notBefore);
+		final DateTime skewedTime = getSkewedTime();
+		if (notBefore != null && skewedTime.isBefore(notBefore)) {
 			throw new IOException("Not before condition violated for time = " + notBefore);
 		}
 	}
@@ -176,7 +171,6 @@ public class SAMLResponseUtils {
 
 		final String codeValue =statusCode.getValue();
 		if (codeValue == null || !StatusCode.SUCCESS.equalsIgnoreCase(codeValue)) {
-			LOGGER.warn("Non-success status code returned: {}", codeValue);
 			throw new IOException("Status code was not successful");
 		}
 	}
@@ -197,7 +191,6 @@ public class SAMLResponseUtils {
 				checkNotOnOrAfter(notOnOrAfter);
 				final String recipient = scd.getRecipient();
 				if (recipient != null && !serviceProviderMetadataUtils.getAssertionConsumerServiceUrl().equalsIgnoreCase(recipient) ) {
-					LOGGER.error("Could not validate recipient.  Expected={}, received={}", serviceProviderMetadataUtils.getAssertionConsumerServiceUrl(), recipient);
 					throw new IOException("Recipient did not match assertion consumer service URL!");
 				}
 			}
@@ -210,7 +203,6 @@ public class SAMLResponseUtils {
 	private void checkDestination(final Response response) throws IOException {
 		final String destination = response.getDestination();
 		if (destination == null || ! destination.equalsIgnoreCase(serviceProviderMetadataUtils.getAssertionConsumerServiceUrl())) {
-			LOGGER.error("Destination {} did not match required destination {}", destination, serviceProviderMetadataUtils.getAssertionConsumerServiceUrl());
 			throw new IOException("Response did not have the appropriate destionation = " + serviceProviderMetadataUtils.getAssertionConsumerServiceUrl());
 		}
 	}
@@ -234,6 +226,10 @@ public class SAMLResponseUtils {
 			throw new IOException("Name ID not included in subject");
 		}
 		return nameId.getValue();
+	}
+
+	private final DateTime getSkewedTime() {
+		return DateTime.now().plusSeconds(SAMLResponseUtils.CLOCK_SKEW_SECONDS);
 	}
 
 	private Subject getSubject(final Assertion assertion) throws IOException {
@@ -287,7 +283,7 @@ public class SAMLResponseUtils {
 				try {
 					bais.close();
 				} catch (final IOException e) {
-					LOGGER.warn("Unable to close resource, memory leak in progress! ", e);
+					// TODO log me
 				}
 			}
 		}

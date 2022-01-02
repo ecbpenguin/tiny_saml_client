@@ -1,6 +1,7 @@
 package com.ecbpenguin.saml.client.utils;
 
 import java.io.File;
+import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,17 +11,12 @@ import org.opensaml.saml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml.saml2.metadata.NameIDFormat;
 import org.opensaml.saml.saml2.metadata.RoleDescriptor;
 import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 
 public class ServiceProviderMetadataUtils {
-
-
-	private static final Logger LOGGER = LoggerFactory.getLogger(AuthnRequestUtils.class);
 
 	private final String spEntityId;
 
@@ -29,7 +25,9 @@ public class ServiceProviderMetadataUtils {
 	private final String protocolBinding;
 
 	private final String assertionConsumerServiceUrl;
-	
+
+	private final X509Certificate signingCertificate;
+
 	public ServiceProviderMetadataUtils(final String spMetadata) {
 		SPSSODescriptor spSSODescriptor = null;
 		String serviceProviderEntityId = null;
@@ -46,11 +44,9 @@ public class ServiceProviderMetadataUtils {
 			final Iterator<EntityDescriptor> ei = serviceProviderMetadataResolver.iterator();
 			while (ei.hasNext()) {
 				final EntityDescriptor ed = ei.next();
-				LOGGER.debug("Inspecting {}", ed);
 				List<RoleDescriptor> roles = ed.getRoleDescriptors();
 				// hack-ish, should have closer bounds checking on the role descriptor being tested
 				for (RoleDescriptor r : roles) {
-					LOGGER.debug("Testing {}: {}",  r, r.getID());
 					if (r instanceof SPSSODescriptor) {
 						// this is the entity that you're going to use, so set the entity ID here
 						serviceProviderEntityId = ed.getEntityID();
@@ -73,7 +69,6 @@ public class ServiceProviderMetadataUtils {
 			// in practice there's only ever one
 			spNameFormat = nameIDFormats.get(0).getFormat();
 		} else {
-			LOGGER.warn("No SP Name format identified!");
 			spNameFormat = "";//unspecified
 		}
 		List<AssertionConsumerService> acss = spSSODescriptor.getAssertionConsumerServices();
@@ -83,7 +78,8 @@ public class ServiceProviderMetadataUtils {
 		} else {
 			throw new IllegalArgumentException("Cannot infer an Assertion Consumer Service URL");
 		}
-		
+
+		signingCertificate = MetadataCertificateUtils.getSigningX509Certifate(spSSODescriptor);
 	}
 
 	public final String getSpEntityId() {
@@ -100,5 +96,9 @@ public class ServiceProviderMetadataUtils {
 
 	public String getSpNameFormat() {
 		return spNameFormat;
+	}
+
+	public X509Certificate getSigningCertificate() {
+		return signingCertificate;
 	}
 }
