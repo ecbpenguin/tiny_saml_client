@@ -2,9 +2,10 @@ package com.ecbpenguin.saml.client;
 
 import java.io.IOException;
 
-import org.opensaml.core.config.InitializationException;
 import org.opensaml.core.config.InitializationService;
 import org.opensaml.saml.saml2.core.AuthnRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ecbpenguin.saml.client.utils.AuthnRequestUtils;
 import com.ecbpenguin.saml.client.utils.IdpMetadataUtils;
@@ -34,8 +35,11 @@ public class TinySamlClient {
 	public TinySamlClient(final TinySamlClientConfig config) throws IOException {
 
 		try {
+			final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
 			InitializationService.initialize();
-		} catch (final InitializationException e) {
+		} catch (final Exception e) {
+			throw new RuntimeException(e);
+		}catch (final Error e) {
 			throw new RuntimeException(e);
 		}
 
