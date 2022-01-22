@@ -24,6 +24,8 @@ import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 
 public class IdpMetadataUtils {
 
+	private static final long METADATA_REFRESH_DELAY_MS = 60 * 60 * 1000; // 1 hour for DEV
+
 	private final FileBackedHTTPMetadataResolver metadataResolver;
 
 	//not final because the class throws this away when validation fails
@@ -40,6 +42,7 @@ public class IdpMetadataUtils {
 		try {
 			// AbstractReoladingMetadataResolver will check the idpMetadataUrl for well-formed-ness
 			metadataResolver = new FileBackedHTTPMetadataResolver(httpClient, config.getIdpMetadataUrl(), tmpDir);
+			metadataResolver.setBackupFileInitNextRefreshDelay(METADATA_REFRESH_DELAY_MS);
 		} catch (final ResolverException e) {
 			throw new RuntimeException(e);
 		}

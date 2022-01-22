@@ -54,8 +54,8 @@ public class MetadataCertificateUtils {
 		if (x509Certificates.size() == 0) {
 			return null;
 		}
-		org.opensaml.xmlsec.signature.X509Certificate openSamlCert = x509Certificates.get(0);
-		String lexicalXSDBase64Binary = openSamlCert.getValue();
+		final org.opensaml.xmlsec.signature.X509Certificate openSamlCert = x509Certificates.get(0);
+		final String lexicalXSDBase64Binary = openSamlCert.getValue();
 		byte[] decodedString = Base64.getDecoder().decode(new String(lexicalXSDBase64Binary).getBytes());
 
 		

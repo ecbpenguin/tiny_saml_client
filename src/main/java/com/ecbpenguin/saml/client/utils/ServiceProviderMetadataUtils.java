@@ -44,9 +44,9 @@ public class ServiceProviderMetadataUtils {
 			final Iterator<EntityDescriptor> ei = serviceProviderMetadataResolver.iterator();
 			while (ei.hasNext()) {
 				final EntityDescriptor ed = ei.next();
-				List<RoleDescriptor> roles = ed.getRoleDescriptors();
+				final List<RoleDescriptor> roles = ed.getRoleDescriptors();
 				// hack-ish, should have closer bounds checking on the role descriptor being tested
-				for (RoleDescriptor r : roles) {
+				for (final RoleDescriptor r : roles) {
 					if (r instanceof SPSSODescriptor) {
 						// this is the entity that you're going to use, so set the entity ID here
 						serviceProviderEntityId = ed.getEntityID();
@@ -64,14 +64,14 @@ public class ServiceProviderMetadataUtils {
 
 		// keeps things 'final'
 		spEntityId = serviceProviderEntityId;
-		List<NameIDFormat> nameIDFormats =spSSODescriptor.getNameIDFormats();
+		final List<NameIDFormat> nameIDFormats =spSSODescriptor.getNameIDFormats();
 		if (nameIDFormats != null && nameIDFormats.size() > 0) {
 			// in practice there's only ever one
 			spNameFormat = nameIDFormats.get(0).getFormat();
 		} else {
 			spNameFormat = "";//unspecified
 		}
-		List<AssertionConsumerService> acss = spSSODescriptor.getAssertionConsumerServices();
+		final List<AssertionConsumerService> acss = spSSODescriptor.getAssertionConsumerServices();
 		if (acss != null && acss.size() > 0) {
 			assertionConsumerServiceUrl = acss.get(0).getLocation();
 			protocolBinding = acss.get(0).getBinding();
@@ -86,19 +86,19 @@ public class ServiceProviderMetadataUtils {
 		return spEntityId;
 	}
 
-	public String getAssertionConsumerServiceUrl() {
+	public final String getAssertionConsumerServiceUrl() {
 		return assertionConsumerServiceUrl;
 	}
 
-	public String getProtocolBinding() {
+	public final String getProtocolBinding() {
 		return protocolBinding;
 	}
 
-	public String getSpNameFormat() {
+	public final String getSpNameFormat() {
 		return spNameFormat;
 	}
 
-	public X509Certificate getSigningCertificate() {
+	public final X509Certificate getSigningCertificate() {
 		return signingCertificate;
 	}
 }

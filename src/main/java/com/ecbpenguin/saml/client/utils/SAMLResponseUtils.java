@@ -60,7 +60,7 @@ public class SAMLResponseUtils {
 		if (idpMetadataUtils == null) {
 			throw new IllegalArgumentException("idpMetadataUtils must not be null!");
 		}
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+		final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		documentBuilderFactory.setNamespaceAware(true);
 
 		try {
@@ -232,7 +232,7 @@ public class SAMLResponseUtils {
 		return DateTime.now().plusSeconds(SAMLResponseUtils.CLOCK_SKEW_SECONDS);
 	}
 
-	private Subject getSubject(final Assertion assertion) throws IOException {
+	private final Subject getSubject(final Assertion assertion) throws IOException {
 		final Subject subject = assertion.getSubject();
 		if (subject == null) {
 			throw new IOException("Assertion did not contain a subject");
@@ -255,6 +255,10 @@ public class SAMLResponseUtils {
 	protected final String validateSAMLResponsePostBinding(final String samlResponse, final boolean checkSignature) throws IOException {
 		final String samlResponseString = decodeBase64Response(samlResponse);
 		final Response response = unmarshallSamlResponse(samlResponseString);
+
+		if (response == null ) {
+			throw new IOException("Unable to extract SAML Response!");
+		}
 
 		checkStatus(response);
 		checkAssertions(response);

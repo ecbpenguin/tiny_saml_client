@@ -5,7 +5,7 @@
 
 	<groupId>com.ecbpenguin</groupId>
 	<artifactId>tiny-saml-client</artifactId>
-	<version>1.2.1</version>
+	<version>1.2.2</version>
 	<packaging>jar</packaging>
 
 	<name>tiny-saml-client</name>
@@ -63,7 +63,8 @@
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
-			<version>1.1.1</version>
+			<version>1.0.1</version>
 		</dependency>
+
 	</dependencies>
 </project>
