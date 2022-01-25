@@ -12,6 +12,8 @@ import org.opensaml.saml.saml2.metadata.NameIDFormat;
 import org.opensaml.saml.saml2.metadata.RoleDescriptor;
 import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
 
+import com.ecbpenguin.utils.FileLogUtils;
+
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
@@ -55,6 +57,7 @@ public class ServiceProviderMetadataUtils {
 				}
 			} 
 		} catch (final ResolverException | ComponentInitializationException e) {
+			FileLogUtils.log(e);
 			throw new IllegalArgumentException(e);
 		}
 		if (spSSODescriptor == null) {

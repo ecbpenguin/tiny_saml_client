@@ -17,6 +17,7 @@ import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.opensaml.xmlsec.signature.support.SignatureValidator;
 
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
+import com.ecbpenguin.utils.FileLogUtils;
 
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
@@ -44,6 +45,7 @@ public class IdpMetadataUtils {
 			metadataResolver = new FileBackedHTTPMetadataResolver(httpClient, config.getIdpMetadataUrl(), tmpDir);
 			metadataResolver.setBackupFileInitNextRefreshDelay(METADATA_REFRESH_DELAY_MS);
 		} catch (final ResolverException e) {
+			FileLogUtils.log(e);
 			throw new RuntimeException(e);
 		}
 
@@ -57,6 +59,7 @@ public class IdpMetadataUtils {
 			metadataResolver.setParserPool(pp);
 			metadataResolver.initialize();
 		} catch (final ComponentInitializationException e) {
+			FileLogUtils.log(e);
 			throw new RuntimeException(e);
 		}
 		updateIdpSigningCredential();

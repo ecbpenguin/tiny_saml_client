@@ -39,6 +39,8 @@ import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.opensaml.xmlsec.signature.support.SignatureSupport;
 import org.w3c.dom.Element;
 
+import com.ecbpenguin.utils.FileLogUtils;
+
 /**
  * Encapsulates anything necessary to generate a SAML v2 AuthnRequest
  * @author ecb_penguin
@@ -71,6 +73,7 @@ public class AuthnRequestUtils {
 			KeyFactory kf = KeyFactory.getInstance("RSA");
 			return kf.generatePrivate(kspec);
 		} catch (final IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+			FileLogUtils.log(e);
 			throw new IOException("Private key file doesn't exist", e);
 		} finally {
 			if (raf!= null) {

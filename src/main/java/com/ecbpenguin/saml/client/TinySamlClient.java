@@ -1,11 +1,7 @@
 package com.ecbpenguin.saml.client;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 
-import org.opensaml.core.config.InitializationException;
 import org.opensaml.core.config.InitializationService;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.slf4j.Logger;
@@ -16,6 +12,7 @@ import com.ecbpenguin.saml.client.utils.IdpMetadataUtils;
 import com.ecbpenguin.saml.client.utils.SAMLResponseUtils;
 import com.ecbpenguin.saml.client.utils.ServiceProviderMetadataUtils;
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
+import com.ecbpenguin.utils.FileLogUtils;
 
 /**
  * This is a simple SAML client that is "operational" - e.g. resilient to metadata / certificate changes
@@ -32,35 +29,18 @@ public class TinySamlClient {
 
 	private final ServiceProviderMetadataUtils serviceProviderMetadataUtils;
 
-	//begin hack
-	private static final String LOG = "/tmp/saml-client-error.log";
-
-	static {
-
-		try {
-			File f = new File(LOG);
-			f.getParentFile().mkdirs();
-			PrintStream capturingOutputStream = new PrintStream(new FileOutputStream(LOG), true);
-			System.setErr(capturingOutputStream);
-			System.setOut(capturingOutputStream);
-		} catch (final IOException e) {
-			System.out.println("Could not create log file " + e.getMessage());
-			e.printStackTrace();
-		} // no finally, these will stay open forever....
-	}
-	//end hack
-
 	public TinySamlClient() throws IOException {
 		this(null);
 	}
 
 	public TinySamlClient(final TinySamlClientConfig config) throws IOException {
 
-		final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
+		
 		try {
 			InitializationService.initialize();
-		} catch (final InitializationException e) {
-			throw new IOException(e);
+			final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
+		} catch (final Throwable t) {
+			FileLogUtils.log(t);
 		}
 
 		if (config == null ) {
@@ -75,15 +55,7 @@ public class TinySamlClient {
 			authnRequestUtils = new AuthnRequestUtils(serviceProviderMetadataUtils, config.getServiceProviderSigningKeyLocation());
 			samlResponseUtils = new SAMLResponseUtils(idpMetadataUtils, serviceProviderMetadataUtils);
 		}
-//		} catch (final Exception e) {
-//			System.out.println(e);
-//			e.printStackTrace();
-//			throw new RuntimeException(e);
-//		} catch (final Error e) {
-//			System.out.println(e);
-//			e.printStackTrace();
-//			throw e;
-//		}
+		
 
 	}
 
