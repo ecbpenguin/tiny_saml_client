@@ -5,7 +5,7 @@
 
 	<groupId>com.ecbpenguin</groupId>
 	<artifactId>tiny-saml-client</artifactId>
-	<version>1.2.3</version>
+	<version>1.2.4</version>
 	<packaging>jar</packaging>
 
 	<name>tiny-saml-client</name>
@@ -75,5 +75,11 @@
 			<artifactId>commons-logging</artifactId>
 			<version>1.0.1</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>2.13.3</version>
+		</dependency>
+
 	</dependencies>
 </project>

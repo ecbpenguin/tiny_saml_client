@@ -13,6 +13,7 @@ import com.ecbpenguin.saml.client.utils.SAMLResponseUtils;
 import com.ecbpenguin.saml.client.utils.ServiceProviderMetadataUtils;
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
 import com.ecbpenguin.utils.FileLogUtils;
+import com.sun.tools.sjavac.Log;
 
 /**
  * This is a simple SAML client that is "operational" - e.g. resilient to metadata / certificate changes
@@ -20,6 +21,8 @@ import com.ecbpenguin.utils.FileLogUtils;
  *
  */
 public class TinySamlClient {
+
+	private final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
 
 	private final AuthnRequestUtils authnRequestUtils;
 
@@ -38,24 +41,28 @@ public class TinySamlClient {
 		
 		try {
 			InitializationService.initialize();
-			final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
 		} catch (final Throwable t) {
 			FileLogUtils.log(t);
 		}
 
-		if (config == null ) {
-			authnRequestUtils = null;
-			samlResponseUtils = null;
-			idpMetadataUtils = null;
-			serviceProviderMetadataUtils = null;
-		} else {
-			final String spMetadataFile = config.getServiceProviderMetadataFile();
-			serviceProviderMetadataUtils = new ServiceProviderMetadataUtils(spMetadataFile);
-			idpMetadataUtils = new IdpMetadataUtils(config);
-			authnRequestUtils = new AuthnRequestUtils(serviceProviderMetadataUtils, config.getServiceProviderSigningKeyLocation());
-			samlResponseUtils = new SAMLResponseUtils(idpMetadataUtils, serviceProviderMetadataUtils);
+		try {
+			if (config == null ) {
+				authnRequestUtils = null;
+				samlResponseUtils = null;
+				idpMetadataUtils = null;
+				serviceProviderMetadataUtils = null;
+			} else {
+				final String spMetadataFile = config.getServiceProviderMetadataFile();
+				serviceProviderMetadataUtils = new ServiceProviderMetadataUtils(spMetadataFile);
+				idpMetadataUtils = new IdpMetadataUtils(config);
+				authnRequestUtils = new AuthnRequestUtils(serviceProviderMetadataUtils, config.getServiceProviderSigningKeyLocation());
+				samlResponseUtils = new SAMLResponseUtils(idpMetadataUtils, serviceProviderMetadataUtils);
+			}
+		} catch (final Exception e) {
+			LOG.error(e.getMessage(), e);
+			FileLogUtils.log(e);
+			throw e;
 		}
-		
 
 	}
 
