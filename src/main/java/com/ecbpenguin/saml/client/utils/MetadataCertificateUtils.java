@@ -13,6 +13,8 @@ import org.opensaml.saml.saml2.metadata.RoleDescriptor;
 import org.opensaml.security.credential.UsageType;
 import org.opensaml.xmlsec.signature.KeyInfo;
 import org.opensaml.xmlsec.signature.X509Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -20,6 +22,8 @@ import org.opensaml.xmlsec.signature.X509Data;
  *
  */
 public class MetadataCertificateUtils {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(MetadataCertificateUtils.class);
 
 	/**
 	 * Extracts the X509 Certificate from a metadata file for various uses (e.g. signing, signature validation)
@@ -55,7 +59,9 @@ public class MetadataCertificateUtils {
 			return null;
 		}
 		final org.opensaml.xmlsec.signature.X509Certificate openSamlCert = x509Certificates.get(0);
-		final String lexicalXSDBase64Binary = openSamlCert.getValue();
+		String lexicalXSDBase64Binary = openSamlCert.getValue();
+		lexicalXSDBase64Binary =lexicalXSDBase64Binary.replaceAll("(?:\\n|\\r)", "");
+		LOGGER.debug("Decoding certificate: {}", lexicalXSDBase64Binary.toCharArray());
 		byte[] decodedString = Base64.getDecoder().decode(new String(lexicalXSDBase64Binary).getBytes());
 
 		
