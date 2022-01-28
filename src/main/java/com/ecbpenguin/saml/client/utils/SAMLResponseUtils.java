@@ -28,6 +28,8 @@ import org.opensaml.saml.saml2.core.SubjectConfirmation;
 import org.opensaml.saml.saml2.core.SubjectConfirmationData;
 import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -45,6 +47,8 @@ import com.ecbpenguin.utils.FileLogUtils;
  */
 public class SAMLResponseUtils {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(SAMLResponseUtils.class);
+	
 	private static final int CLOCK_SKEW_SECONDS = 30;
 
 	private final DocumentBuilder documentBuilder; 
@@ -68,7 +72,7 @@ public class SAMLResponseUtils {
 		try {
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		} catch (final ParserConfigurationException e) {
-			FileLogUtils.log(e);
+			LOGGER.error("Count not initialize SAML Response Utils", e);
 			throw new RuntimeException(e);
 		}
 

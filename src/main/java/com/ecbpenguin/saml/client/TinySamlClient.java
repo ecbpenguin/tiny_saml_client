@@ -13,7 +13,6 @@ import com.ecbpenguin.saml.client.utils.SAMLResponseUtils;
 import com.ecbpenguin.saml.client.utils.ServiceProviderMetadataUtils;
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
 import com.ecbpenguin.utils.FileLogUtils;
-import com.sun.tools.sjavac.Log;
 
 /**
  * This is a simple SAML client that is "operational" - e.g. resilient to metadata / certificate changes
@@ -22,7 +21,7 @@ import com.sun.tools.sjavac.Log;
  */
 public class TinySamlClient {
 
-	private final Logger LOG = LoggerFactory.getLogger(TinySamlClient.class);
+	private final Logger LOGGER = LoggerFactory.getLogger(TinySamlClient.class);
 
 	private final AuthnRequestUtils authnRequestUtils;
 
@@ -59,7 +58,7 @@ public class TinySamlClient {
 				samlResponseUtils = new SAMLResponseUtils(idpMetadataUtils, serviceProviderMetadataUtils);
 			}
 		} catch (final Exception e) {
-			LOG.error(e.getMessage(), e);
+			LOGGER.error(e.getMessage(), e);
 			FileLogUtils.log(e);
 			throw e;
 		}
@@ -95,6 +94,7 @@ public class TinySamlClient {
 		try {
 			return samlResponseUtils.validateSAMLResponsePostBinding(encodedSamlResponse);
 		} catch (final IOException e) {
+			LOGGER.error("Response failed validation", e);
 			throw new RuntimeException(e);
 		}
 	}

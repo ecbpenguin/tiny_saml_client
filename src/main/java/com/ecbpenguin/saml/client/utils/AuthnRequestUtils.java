@@ -37,9 +37,9 @@ import org.opensaml.xmlsec.signature.impl.SignatureBuilder;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.opensaml.xmlsec.signature.support.SignatureSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
-
-import com.ecbpenguin.utils.FileLogUtils;
 
 /**
  * Encapsulates anything necessary to generate a SAML v2 AuthnRequest
@@ -47,6 +47,8 @@ import com.ecbpenguin.utils.FileLogUtils;
  *
  */
 public class AuthnRequestUtils {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(AuthnRequestUtils.class);
 
 	private final ServiceProviderMetadataUtils serviceProviderMetadataUtils;
 
@@ -65,6 +67,7 @@ public class AuthnRequestUtils {
 
 	private final PrivateKey loadPrivateKey(final String privateKeyLocation) throws IOException {
 		RandomAccessFile raf = null;
+		LOGGER.debug("Loading private key from {}", privateKeyLocation);
 		try {
 			raf  = new RandomAccessFile(privateKeyLocation, "r");
 			final byte[] buf = new byte[(int) raf.length()];
@@ -73,14 +76,14 @@ public class AuthnRequestUtils {
 			KeyFactory kf = KeyFactory.getInstance("RSA");
 			return kf.generatePrivate(kspec);
 		} catch (final IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-			FileLogUtils.log(e);
+			LOGGER.error(e.getMessage(), e);
 			throw new IOException("Private key file doesn't exist", e);
 		} finally {
 			if (raf!= null) {
 				try {
 					raf.close();
 				} catch (final IOException e2) {
-					// TODO log this once we clean up logging
+					LOGGER.warn("Hanging file handle: {}", e2.getMessage(), e2);
 				}
 			}
 		}
@@ -115,8 +118,7 @@ public class AuthnRequestUtils {
 			try {
 				signRequest(authnRequest);
 			} catch (final IOException e) {
-				// TODO log this
-				// letting an unsigned request flow through
+				LOGGER.error("Could not sign request.  Passing unsigned AuthnRequest {}", e.getMessage(), e);
 			}
 		}
 		return authnRequest;
@@ -152,6 +154,7 @@ public class AuthnRequestUtils {
 	}
 
 	public static final String wireEncodeAuthRequest(final AuthnRequest authnRequest) {
+		LOGGER.debug("Encoding AuthnRequest: {}",  authnRequest);
 		final Marshaller marshaller = XMLObjectProviderRegistrySupport.getMarshallerFactory().getMarshaller(authnRequest);//Configuration.getMarshallerFactory().getMarshaller(authnRequest);
 		Element authElement ;
 		try {
@@ -168,12 +171,13 @@ public class AuthnRequestUtils {
 				.newTransformer()
 				.transform(new DOMSource(authElement), result);
 		} catch (final TransformerException e) {
+			LOGGER.error("Count not marshall to DOM tree: {}", e.getMessage(), e);
 			throw new RuntimeException(e);
 		}
 
 		final String rawXmlResponse  = result.getWriter().toString();
 		final String base64RequestMessage = Base64.getEncoder().withoutPadding().encodeToString(rawXmlResponse.getBytes());
+		LOGGER.debug("Wire encoded authnRequest to {}", base64RequestMessage);
 		return base64RequestMessage;
-
 	}
 }

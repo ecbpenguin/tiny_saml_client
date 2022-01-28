@@ -15,6 +15,8 @@ import org.opensaml.security.x509.BasicX509Credential;
 import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ecbpenguin.saml.config.TinySamlClientConfig;
 import com.ecbpenguin.utils.FileLogUtils;
@@ -24,6 +26,8 @@ import net.shibboleth.utilities.java.support.resolver.ResolverException;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 
 public class IdpMetadataUtils {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(IdpMetadataUtils.class);
 
 	private static final long METADATA_REFRESH_DELAY_MS = 60 * 60 * 1000; // 1 hour for DEV
 
@@ -80,12 +84,12 @@ public class IdpMetadataUtils {
 					if (SAMLConstants.SAML2_POST_BINDING_URI.equalsIgnoreCase(ssoService.getBinding())) {
 						endpointUri = ssoService.getLocation();
 					}
-					
 				}
 			}
 		}
 
 		if (foundCert != null ) {
+			LOGGER.info("Updating with endpointURI = {}, signing credential={}", endpointUri, foundCert);
 			idpSigningCredential = new BasicX509Credential(foundCert);
 			idpEndpoint = endpointUri;
 		}
@@ -103,6 +107,7 @@ public class IdpMetadataUtils {
 			SignatureValidator.validate(signature, idpSigningCredential);
 			valid = true;
 		} catch ( final SignatureException e) {
+			LOGGER.warn("Faled to valiate signing credential on first pass: {}", e.getMessage(), e);
 			rootCause = e;
 			valid = false;
 		}
@@ -116,6 +121,7 @@ public class IdpMetadataUtils {
 			SignatureValidator.validate(signature, idpSigningCredential);
 			valid = true;
 		} catch ( final SignatureException e) {
+			LOGGER.warn("Faled to valiate signing credential on second pass: {}", e.getMessage(), e);
 			rootCause = e;
 			valid = false;
 		}
@@ -130,6 +136,7 @@ public class IdpMetadataUtils {
 		} catch (final ResolverException e) {
 			//can't refresh, could be in the middle of a ADFS refresh.
 			// fail and let the next iteration try again
+			LOGGER.error("Failed to refresh metadata", e);
 			return false;
 		}
 
@@ -138,6 +145,7 @@ public class IdpMetadataUtils {
 			SignatureValidator.validate(signature, idpSigningCredential);
 			valid = true;
 		} catch ( final SignatureException e) {
+			LOGGER.warn("Faled to valiate signing credential on final pass: {}", e.getMessage(), e);
 			rootCause = e;
 			valid = false;
 		}

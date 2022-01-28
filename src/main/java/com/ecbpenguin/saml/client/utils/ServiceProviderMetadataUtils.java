@@ -11,14 +11,16 @@ import org.opensaml.saml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml.saml2.metadata.NameIDFormat;
 import org.opensaml.saml.saml2.metadata.RoleDescriptor;
 import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
-
-import com.ecbpenguin.utils.FileLogUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 
 public class ServiceProviderMetadataUtils {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(ServiceProviderMetadataUtils.class);
 
 	private final String spEntityId;
 
@@ -33,6 +35,8 @@ public class ServiceProviderMetadataUtils {
 	public ServiceProviderMetadataUtils(final String spMetadata) {
 		SPSSODescriptor spSSODescriptor = null;
 		String serviceProviderEntityId = null;
+		LOGGER.debug("Loading Service Provider Metadata file from: {}", spMetadata)
+;
 		try {
 			final File spMetadataFile = new File(spMetadata);
 			final FilesystemMetadataResolver serviceProviderMetadataResolver = new FilesystemMetadataResolver(spMetadataFile);
@@ -57,7 +61,7 @@ public class ServiceProviderMetadataUtils {
 				}
 			} 
 		} catch (final ResolverException | ComponentInitializationException e) {
-			FileLogUtils.log(e);
+			LOGGER.error(e.getMessage(), e);
 			throw new IllegalArgumentException(e);
 		}
 		if (spSSODescriptor == null) {
@@ -74,6 +78,7 @@ public class ServiceProviderMetadataUtils {
 		} else {
 			spNameFormat = "";//unspecified
 		}
+		LOGGER.info("Using Service Provider name format: {}", spNameFormat);
 		final List<AssertionConsumerService> acss = spSSODescriptor.getAssertionConsumerServices();
 		if (acss != null && acss.size() > 0) {
 			assertionConsumerServiceUrl = acss.get(0).getLocation();
@@ -83,6 +88,7 @@ public class ServiceProviderMetadataUtils {
 		}
 
 		signingCertificate = MetadataCertificateUtils.getSigningX509Certifate(spSSODescriptor);
+		LOGGER.info("Using Service Provider signing certificate {}", signingCertificate);
 	}
 
 	public final String getSpEntityId() {

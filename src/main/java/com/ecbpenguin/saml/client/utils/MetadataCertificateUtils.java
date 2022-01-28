@@ -80,7 +80,7 @@ public class MetadataCertificateUtils {
 					bais.close();
 				} catch (final IOException e) {
 					//eat this, alert about possible memory leak.
-					//  TODO log this logging will initialize
+					LOGGER.info("Memory leak", e);
 				}
 			}
 		}
