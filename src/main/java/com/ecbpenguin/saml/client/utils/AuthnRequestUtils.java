@@ -18,19 +18,29 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.joda.time.DateTime;
+import org.opensaml.core.xml.XMLObjectBuilderFactory;
 import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
 import org.opensaml.core.xml.io.Marshaller;
 import org.opensaml.core.xml.io.MarshallingException;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.SAMLObjectBuilder;
 import org.opensaml.saml.common.SAMLVersion;
 import org.opensaml.saml.common.SignableSAMLObject;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.Issuer;
 import org.opensaml.saml.saml2.core.NameIDPolicy;
 import org.opensaml.saml.saml2.core.impl.AuthnRequestBuilder;
 import org.opensaml.saml.saml2.core.impl.IssuerBuilder;
 import org.opensaml.saml.saml2.core.impl.NameIDPolicyBuilder;
+import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml.saml2.metadata.Endpoint;
 import org.opensaml.security.x509.BasicX509Credential;
 import org.opensaml.xmlsec.SignatureSigningParameters;
+import org.opensaml.xmlsec.context.SecurityParametersContext;
 import org.opensaml.xmlsec.keyinfo.impl.X509KeyInfoGeneratorFactory;
 import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.impl.SignatureBuilder;
@@ -72,7 +82,13 @@ public class AuthnRequestUtils {
 			raf  = new RandomAccessFile(privateKeyLocation, "r");
 			final byte[] buf = new byte[(int) raf.length()];
 			raf.readFully(buf);
-			PKCS8EncodedKeySpec kspec = new PKCS8EncodedKeySpec(buf);
+			final String temp = new String(buf);
+			String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
+			privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
+			privKeyPEM = privKeyPEM.replaceAll("(?:\\n|\\r)", "");
+
+			byte [] decoded = Base64.getDecoder().decode(privKeyPEM);
+			PKCS8EncodedKeySpec kspec = new PKCS8EncodedKeySpec(decoded);
 			KeyFactory kf = KeyFactory.getInstance("RSA");
 			return kf.generatePrivate(kspec);
 		} catch (final IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
@@ -140,12 +156,7 @@ public class AuthnRequestUtils {
 		signature.setSigningCredential(signingCredential);
 		samlObject.setSignature(signature);
 
-		// Actually sign the request
-		SignatureSigningParameters signingParameters = new SignatureSigningParameters();
-		signingParameters.setSigningCredential(signingCredential);
-		signingParameters.setSignatureCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
-		signingParameters.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
-		signingParameters.setKeyInfoGenerator(new X509KeyInfoGeneratorFactory().newInstance());
+		final SignatureSigningParameters signingParameters = createSignatureSigningParameters();
 		try {
 			SignatureSupport.signObject(samlObject, signingParameters);
 		} catch (final org.opensaml.security.SecurityException | MarshallingException | SignatureException e) {
@@ -153,7 +164,16 @@ public class AuthnRequestUtils {
 		}
 	}
 
-	public static final String wireEncodeAuthRequest(final AuthnRequest authnRequest) {
+	private SignatureSigningParameters createSignatureSigningParameters() {
+		SignatureSigningParameters signingParameters = new SignatureSigningParameters();
+		signingParameters.setSigningCredential(signingCredential);
+		signingParameters.setSignatureCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+		signingParameters.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
+		signingParameters.setKeyInfoGenerator(new X509KeyInfoGeneratorFactory().newInstance());
+		return signingParameters;
+	}
+
+	public final String wireEncodePostRequest(final AuthnRequest authnRequest) {
 		LOGGER.debug("Encoding AuthnRequest: {}",  authnRequest);
 		final Marshaller marshaller = XMLObjectProviderRegistrySupport.getMarshallerFactory().getMarshaller(authnRequest);//Configuration.getMarshallerFactory().getMarshaller(authnRequest);
 		Element authElement ;
@@ -179,5 +199,48 @@ public class AuthnRequestUtils {
 		final String base64RequestMessage = Base64.getEncoder().withoutPadding().encodeToString(rawXmlResponse.getBytes());
 		LOGGER.debug("Wire encoded authnRequest to {}", base64RequestMessage);
 		return base64RequestMessage;
+	}
+
+	public final String wireEncodeRedirectRequest(final AuthnRequest authnRequest, final String idpEndpointUrl) throws IOException {
+
+		if (authnRequest == null || idpEndpointUrl == null) {
+			return null;
+		}
+
+		final MessageContext<SAMLObject> messageContext = new MessageContext<>();
+		messageContext.setMessage(authnRequest);
+
+		// This moved out of the Configuration class
+		final XMLObjectBuilderFactory builderFactory = XMLObjectProviderRegistrySupport.getBuilderFactory();
+
+		//BLEH
+		final SAMLObjectBuilder<Endpoint> endpointBuilder =
+		(SAMLObjectBuilder<Endpoint>) builderFactory.getBuilder(AssertionConsumerService.DEFAULT_ELEMENT_NAME);
+
+		// Endpoint is now set via subcontexts
+		final SAMLPeerEntityContext peerEntityContext = messageContext.getSubcontext(SAMLPeerEntityContext.class, true);
+		final SAMLEndpointContext endpointContext = peerEntityContext.getSubcontext(SAMLEndpointContext.class, true);
+		final Endpoint samlEndpoint = endpointBuilder.buildObject();
+		samlEndpoint.setLocation(idpEndpointUrl);
+		endpointContext.setEndpoint(samlEndpoint);
+
+		final SecurityParametersContext securityContext = messageContext.getSubcontext(SecurityParametersContext.class, true);
+		final SignatureSigningParameters signingParameters = createSignatureSigningParameters();
+		securityContext.setSignatureSigningParameters(signingParameters);
+		messageContext.addSubcontext(securityContext, true);
+		// MessageContext and HttpServletResponse now get set directly on the encoder
+		final StringHTTPRedirectDeflateEncoder httpRedirectDeflateEncoder = new StringHTTPRedirectDeflateEncoder();
+		httpRedirectDeflateEncoder.setMessageContext(messageContext);
+		String redirectUrl =null;
+		try {
+			// we are not initializing because all that's doing is checking for a context and a http servlet response
+			// we don't have a http servlet response. 
+			//httpRedirectDeflateEncoder.initialize();
+			redirectUrl = httpRedirectDeflateEncoder.createEncodedRequest();
+		} catch (final MessageEncodingException e) {
+			LOGGER.error("Could not encode request {}", e);
+			throw new IOException(e);
+		} 
+		return redirectUrl;
 	}
 }

@@ -73,7 +73,7 @@ public class TinySamlClientConfig {
 			throw new IllegalArgumentException("Property " + IDP_METADATA_CACHE_LOCATION + " not found or not castable to a String in " + tinySamlClientConfigFile);
 		}
 
-		Object signingKeyLocation = tinySamlClientProps.getOrDefault(SP_SIGNING_KEY_LOCATION_KEY, null);
+		final Object signingKeyLocation = tinySamlClientProps.getOrDefault(SP_SIGNING_KEY_LOCATION_KEY, null);
 		if (signingKeyLocation != null && signingKeyLocation instanceof String) {
 			serviceProviderSigningKeyLocation = (String)signingKeyLocation;
 		} else {

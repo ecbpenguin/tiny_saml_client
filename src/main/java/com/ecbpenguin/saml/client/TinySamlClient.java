@@ -3,6 +3,7 @@ package com.ecbpenguin.saml.client;
 import java.io.IOException;
 
 import org.opensaml.core.config.InitializationService;
+import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,14 +67,28 @@ public class TinySamlClient {
 	}
 
 	/**
-	 * Builds a SAML2 AuthnRequest and encodes it for the appropriate binding, ready to put into a HTML response.
+	 * Builds a SAML2 AuthnRequest and encodes it for the POST binding, ready to put into a HTML response.
 	 * 
 	 * @param sign whether or not to sign the request
 	 * @return
 	 */
-	public final String buildSAMLRequest(final boolean sign) {
-		AuthnRequest request = authnRequestUtils.buildAuthnRequest(sign);
-		return AuthnRequestUtils.wireEncodeAuthRequest(request);
+	public final String buildSAMLRequestPostBinding(final boolean sign) {
+		final AuthnRequest request = authnRequestUtils.buildAuthnRequest(sign);
+		return authnRequestUtils.wireEncodePostRequest(request);
+	}
+
+	/**
+	 * Builds a SAML2 AuthnRequest and encodes it for the redirect binding, including all URL parameters 
+	 * @param sign
+	 * @return
+	 */
+	public final String buildSAMLRequestRedirectBinding(final boolean sign) {
+		final AuthnRequest request = authnRequestUtils.buildAuthnRequest(false);
+		try {
+			return authnRequestUtils.wireEncodeRedirectRequest(request, getIdpSSOUrl());
+		} catch (final IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
