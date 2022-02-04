@@ -213,7 +213,7 @@ public class AuthnRequestUtils {
 		// This moved out of the Configuration class
 		final XMLObjectBuilderFactory builderFactory = XMLObjectProviderRegistrySupport.getBuilderFactory();
 
-		//BLEH
+		@SuppressWarnings("unchecked")
 		final SAMLObjectBuilder<Endpoint> endpointBuilder =
 		(SAMLObjectBuilder<Endpoint>) builderFactory.getBuilder(AssertionConsumerService.DEFAULT_ELEMENT_NAME);
 

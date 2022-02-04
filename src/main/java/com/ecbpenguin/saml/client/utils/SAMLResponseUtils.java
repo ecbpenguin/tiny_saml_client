@@ -34,8 +34,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-import com.ecbpenguin.utils.FileLogUtils;
-
 /**
  * This class employs OpenSAML classes to validate a SAML Response. It needs augmentation for
  * 1. In Response To metrics = the caller would need to retain the original SAML request to perform this validation

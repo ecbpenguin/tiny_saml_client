@@ -5,7 +5,7 @@
 
 	<groupId>com.ecbpenguin</groupId>
 	<artifactId>tiny-saml-client</artifactId>
-	<version>1.2.5</version>
+	<version>1.2.6</version>
 	<packaging>jar</packaging>
 
 	<name>tiny-saml-client</name>
@@ -84,6 +84,11 @@
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>3.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.26</version>
 		</dependency>
 	</dependencies>
 </project>

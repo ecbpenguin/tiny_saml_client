@@ -3,7 +3,6 @@ package com.ecbpenguin.saml.client;
 import java.io.IOException;
 
 import org.opensaml.core.config.InitializationService;
-import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
